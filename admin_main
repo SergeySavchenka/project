@@ -1,0 +1,323 @@
+from PyQt6.QtWidgets import *
+from PyQt6.QtCore import Qt
+import mysql.connector
+import openpyxl
+
+
+class AdminDatabase(QWidget):
+    def __init__(self):
+        self.connection = mysql.connector.connect(
+            host="localhost",
+            user="root",
+            password="",
+            database="inform_sys"
+        )
+
+        self.cursor = self.connection.cursor()
+        super().__init__()
+
+        self.setWindowTitle("Данные")
+        self.setGeometry(300, 300, 600, 400)
+
+        self.init_ui()
+
+    def init_ui(self):
+        layout = QVBoxLayout()
+
+        self.label_info = QLabel("Выберите таблицу для отображения данных:")
+        self.table_selector = QComboBox()
+        self.populate_table_combo()
+
+        choice_layout = QHBoxLayout()
+        choice_layout.addWidget(self.label_info)
+        choice_layout.addWidget(self.table_selector)
+        layout.addLayout(choice_layout)
+
+        self.add_button = QPushButton("Добавить запись")
+        self.add_button.clicked.connect(self.show_add_data_dialog)
+        self.delete_button = QPushButton("Удалить запись")
+        self.delete_button.clicked.connect(self.show_delete_data_dialog)
+        self.edit_button = QPushButton('Редактировать запись')
+        # self.edit_button.clicked.connect(self.show_edit_data_dialog)
+
+        button_layout = QHBoxLayout()
+        button_layout.addWidget(self.add_button)
+        button_layout.addWidget(self.delete_button)
+        button_layout.addWidget(self.edit_button)
+        layout.addLayout(button_layout)
+
+        self.data_table = QTableWidget()
+        self.data_table.horizontalHeader().setSectionResizeMode(QHeaderView.ResizeMode.Stretch)
+        self.data_table.verticalHeader().setSectionResizeMode(QHeaderView.ResizeMode.Stretch)
+        self.data_table.verticalHeader().setVisible(False)
+
+        self.btn_show_data = QPushButton("Показать данные", self)
+        self.btn_show_data.clicked.connect(self.show_data)
+
+        layout.addWidget(self.label_info)
+        layout.addWidget(self.table_selector)
+        layout.addWidget(self.data_table)
+        layout.addWidget(self.btn_show_data)
+
+        self.setLayout(layout)
+
+        close_button = QPushButton('Закрыть окно')
+        close_button.clicked.connect(self.close)
+        layout.addWidget(close_button)
+
+    def show_data(self):
+        # Очистка таблицы перед отображением новых данных
+        self.data_table.clear()
+        self.data_table.setRowCount(0)
+
+        # Выбор таблицы из выпадающего списка
+        selected_table = self.table_selector.currentText()
+
+        self.cursor.execute(f"SELECT * FROM {selected_table}")
+        data = self.cursor.fetchall()
+
+        # Если есть данные
+        if data:
+            # Определение числа столбцов и строк
+            num_rows = len(data)
+            num_cols = len(data[0])
+
+            # Установка размера таблицы
+            self.data_table.setRowCount(num_rows)
+            self.data_table.setColumnCount(num_cols)
+
+            # Установка заголовков столбцов
+            column_headers = [description[0] for description in self.cursor.description]
+            self.data_table.setHorizontalHeaderLabels(column_headers)
+
+            # Заполнение ячеек таблицы данными
+            for row in range(num_rows):
+                for col in range(num_cols):
+                    item = QTableWidgetItem(str(data[row][col]))
+                    self.data_table.setItem(row, col, item)
+
+    def populate_table_combo(self):
+        # Получение списка таблиц из базы данных
+        self.cursor.execute("SHOW TABLES")
+        tables = self.cursor.fetchall()
+
+        # Заполнение выпадающего списка
+        for table in tables:
+            self.table_selector.addItem(table[0])
+
+    def show_add_data_dialog(self):
+        # Определение выбранной таблицы
+        selected_table = self.table_selector.currentText()
+
+        # Получение названий столбцов для выбранной таблицы
+        self.cursor.execute(f"DESCRIBE {selected_table}")
+        columns = [column[0] for column in self.cursor.fetchall()]
+
+        # Создание диалогового окна с полями ввода для каждого столбца и кнопкой "Добавить"
+        form_layout = QFormLayout()
+        input_fields = []
+
+        for column in columns:
+            label = QLabel(column)
+            input_field = QLineEdit()
+            form_layout.addRow(label, input_field)
+            input_fields.append(input_field)
+
+        dialog = QDialog(self)
+        dialog.setWindowTitle('Ввод данных')
+        dialog.setLayout(form_layout)
+
+        # Обработчик нажатия кнопки "Добавить"
+        def add_data():
+            # Получение значений из полей ввода
+            values = [field.text() for field in input_fields]
+
+            # Убедитесь, что количество введенных значений соответствует количеству столбцов
+            if len(values) == len(columns):
+                # Формирование SQL-запроса для добавления данных
+                query = f"INSERT INTO {selected_table} ({', '.join(columns)}) VALUES ({', '.join(['%s'] * len(columns))})"
+                self.cursor.execute(query, values)
+                self.connection.commit()
+
+                print("Данные добавлены успешно")
+                self.show_data()  # Обновление отображения данных
+                dialog.accept()  # Закрытие диалогового окна после успешного добавления данных
+
+            else:
+                print("Ошибка: Количество введенных значений не совпадает с количеством столбцов")
+
+        add_button = QPushButton('Добавить')
+        form_layout.addRow(add_button)
+        add_button.clicked.connect(add_data)
+
+        # Отображение диалогового окна
+        result = dialog.exec()
+
+    def show_delete_data_dialog(self):
+        # Определение выбранной таблицы
+        selected_table = self.table_selector.currentText()
+
+        # Создание диалогового окна с полем ввода для значения id и кнопкой "Удалить"
+        form_layout = QFormLayout()
+        id_input = QLineEdit()
+        delete_button = QPushButton('Удалить')
+        form_layout.addRow("Введите ID для удаления данных:", id_input)
+        form_layout.addRow(delete_button)
+
+        dialog = QDialog(self)
+        dialog.setWindowTitle('Удаление данных')
+        dialog.setLayout(form_layout)
+
+        # Обработчик нажатия кнопки "Удалить"
+        def delete_data():
+            self.cursor.execute(f"DESCRIBE {selected_table}")
+            id_column = [column[0] for column in self.cursor.fetchall()][0]
+
+            # Получение значения из поля ввода
+            id_value = id_input.text()
+
+            # Формирование SQL-запроса для удаления данных
+            query = f"DELETE FROM {selected_table} WHERE {id_column} = {id_value}"
+            self.cursor.execute(query)
+            self.connection.commit()
+
+            print("Данные удалены успешно")
+            self.show_data()  # Обновление отображения данных
+            dialog.accept()  # Закрытие диалогового окна после успешного удаления данных
+
+        delete_button.clicked.connect(delete_data)
+
+        # Отображение диалогового окна
+        result = dialog.exec()
+
+    # def show_edit_data_dialog(self):
+    #     selected_data = self.get_selected_data()
+    #
+    #     if selected_data:
+    #         edit_dialog = QDialog(self)
+    #         edit_dialog.setWindowTitle('Редактировать запись')
+    #
+    #         layout = QFormLayout()
+    #
+    #         # Примеры полей редактирования (замените их на необходимые поля)
+    #         for key, value in selected_data.items():
+    #             edit_line = QLineEdit(self)
+    #             edit_line.setText(str(value))
+    #             layout.addRow(key.capitalize(), edit_line)
+    #
+    #         save_button = QPushButton('Сохранить')
+    #         save_button.clicked.connect(edit_dialog.accept)
+    #         layout.addRow(save_button)
+    #
+    #         edit_dialog.setLayout(layout)
+    #
+    #         result = edit_dialog.exec()
+    #
+    #         if result == QDialog.DialogCode.Accepted:
+    #             edited_data = {}
+    #             for i in range(layout.rowCount() - 1):
+    #                 key = layout.itemAt(i, QFormLayout.ItemRole.LabelRole).widget().text().lower()
+    #                 value = layout.itemAt(i, QFormLayout.ItemRole.FieldRole).widget().text()
+    #                 edited_data[key] = value
+    #
+    #             # Реализуйте сохранение отредактированных данных в базе данных
+    #             print("Отредактированные данные:", edited_data)
+    #     else:
+    #         print("Выберите запись для редактирования.")
+    #
+    # def get_selected_data(self):
+    #     selected_items = self.data_table.selectedItems()
+    #     if selected_items:
+    #         selected_row = selected_items[0].row()
+    #         selected_data = {}
+    #         for col in range(self.data_table.columnCount()):
+    #             header = self.data_table.horizontalHeaderItem(col).text()
+    #             item = self.data_table.item(selected_row, col)
+    #             selected_data[header] = item.text()
+    #         return selected_data
+    #     return None
+
+
+class AdminExcel(QWidget):
+    def __init__(self):
+        self.connection = mysql.connector.connect(
+            host="localhost",
+            user="root",
+            password="",
+            database="inform_sys"
+        )
+
+        self.cursor = self.connection.cursor()
+        super().__init__()
+
+        self.setWindowTitle("Excel")
+        self.setGeometry(300, 300, 400, 200)
+
+        self.init_ui()
+
+    def init_ui(self):
+        layout = QVBoxLayout()
+
+        self.label_info = QLabel("Выберите варианты действия:")
+        self.label_info.setAlignment(Qt.AlignmentFlag.AlignHCenter)
+        self.label_info.adjustSize()
+
+        drivers_button = QPushButton("Собрать информацию о маршрутах водителя")
+        drivers_button.clicked.connect(self.drivers_to_excel)
+        autos_button = QPushButton('Собрать информацию о маршрутах машины')
+        autos_button.clicked.connect(self.autos_to_excel)
+        med_button = QPushButton('Собрать информацию о прохождении мед. осмотра')
+        med_button.clicked.connect(self.medicine_to_excel)
+        service_button = QPushButton('Собрать информацию о прохождении тех. обслуживания') # 1 лист - по датам, 2 лист - кол-ву разных типов
+        service_button.clicked.connect(self.service_to_excel)
+
+        buttons_layout = QVBoxLayout()
+        buttons_layout.addWidget(drivers_button)
+        buttons_layout.addWidget(autos_button)
+        buttons_layout.addWidget(med_button)
+        buttons_layout.addWidget(service_button)
+
+        layout.addWidget(self.label_info)
+        layout.addLayout(buttons_layout)
+        self.setLayout(layout)
+
+        close_button = QPushButton('Закрыть окно')
+        close_button.clicked.connect(self.close)
+        layout.addWidget(close_button)
+
+    def drivers_to_excel(self):
+        def export():
+            # self.cursor.execute('describe routs')
+            # columns = [column[0] for column in self.cursor.fetchall()]
+            pass
+
+        dialog = QDialog(self)
+        dialog.setWindowTitle('Маршруты')
+
+        drivers_cb = QComboBox()
+        self.cursor.execute('select driver_id, name, female from driver')
+        data = [list(sub_list) for sub_list in self.cursor.fetchall()]
+        for i in [f'{str(item[0])} - {item[2]} {item[1]}' for item in data]:
+            drivers_cb.addItem(i)
+
+        routs_table = QTableWidget()
+        show_table = QPushButton('Вывести в excel')
+        show_table.clicked.connect(export)
+        layout = QVBoxLayout()
+        layout.addWidget(drivers_cb)
+        layout.addWidget(routs_table)
+        layout.addWidget(show_table)
+        dialog.setLayout(layout)
+
+        result = dialog.exec()
+
+
+
+    def autos_to_excel(self):
+        pass
+
+    def medicine_to_excel(self):
+        pass
+
+    def service_to_excel(self):
+        pass
