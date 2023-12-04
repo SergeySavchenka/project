@@ -17,7 +17,7 @@ class DriverWindow(QWidget):
         self.cursor = self.connection.cursor()
 
         self.setWindowTitle("Карточка водителя")
-        self.setGeometry(300, 300, 600, 400)
+        self.setGeometry(0, 0, 200, 300)
 
         self.init_ui()
 
@@ -52,6 +52,13 @@ class DriverWindow(QWidget):
         inf_layout.addWidget(create_dialog)
 
         self.setLayout(inf_layout)
+        self.center()
+
+    def center(self):
+        screen_geometry = QApplication.primaryScreen().geometry()
+        window_geometry = self.frameGeometry()
+        window_geometry.moveCenter(screen_geometry.center())
+        self.move(window_geometry.topLeft())
 
     def show_roots(self):
         dialog = QDialog(self)
@@ -77,7 +84,6 @@ class DriverWindow(QWidget):
             dialog_layout.addWidget(routs_table)
             routs_table.setRowCount(0)
 
-            # Определение числа столбцов и строк
             num_rows = len(data)
             num_cols = len(data[0])
 
@@ -106,5 +112,30 @@ class DriverWindow(QWidget):
         result = dialog.exec()
 
     def to_excel(self):
-        pass
+        import openpyxl
+        from openpyxl.utils import get_column_letter
+        from openpyxl.styles import Alignment
 
+        workbook = openpyxl.Workbook()
+        worksheet = workbook.active
+
+        for col_idx, header in enumerate(
+                ["rout_id", "auto_id", "routs.driver_id", "departure_date", "arrival_date", "distance",
+                 "destination"], start=1):
+            column_letter = get_column_letter(col_idx)
+            cell = f"{column_letter}1"
+            worksheet[cell] = header
+            worksheet[cell].alignment = Alignment(horizontal='center')
+
+        self.cursor.execute(
+            f'select rout_id, auto_id, routs.driver_id, departure_date, arrival_date, distance, destination from routs '
+            f'inner join driver on driver.driver_id = routs.driver_id '
+            f'where driver.driver_id = {self.driver_id}')
+
+        for row_idx, row_data in enumerate([list(item) for item in self.cursor.fetchall()], start=2):
+            for col_idx, value in enumerate(row_data, start=1):
+                column_letter = get_column_letter(col_idx)
+                cell = f"{column_letter}{row_idx}"
+                worksheet[cell] = value
+
+        workbook.save(f'my_routs.xlsx')
