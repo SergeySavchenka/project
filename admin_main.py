@@ -2,6 +2,8 @@ from PyQt6.QtWidgets import *
 from PyQt6.QtCore import Qt
 import mysql.connector
 import openpyxl
+from openpyxl.utils import get_column_letter
+from openpyxl.styles import Alignment
 
 
 class AdminDatabase(QWidget):
@@ -17,7 +19,7 @@ class AdminDatabase(QWidget):
         super().__init__()
 
         self.setWindowTitle("Данные")
-        self.setGeometry(300, 300, 600, 400)
+        self.setGeometry(0, 0, 600, 400)
 
         self.init_ui()
 
@@ -64,6 +66,13 @@ class AdminDatabase(QWidget):
         close_button = QPushButton('Закрыть окно')
         close_button.clicked.connect(self.close)
         layout.addWidget(close_button)
+        self.center()
+
+    def center(self):
+        screen_geometry = QApplication.primaryScreen().geometry()
+        window_geometry = self.frameGeometry()
+        window_geometry.moveCenter(screen_geometry.center())
+        self.move(window_geometry.topLeft())
 
     def show_data(self):
         # Очистка таблицы перед отображением новых данных
@@ -251,7 +260,7 @@ class AdminExcel(QWidget):
         super().__init__()
 
         self.setWindowTitle("Excel")
-        self.setGeometry(300, 300, 400, 200)
+        self.setGeometry(0, 0, 300, 200)
 
         self.init_ui()
 
@@ -268,14 +277,11 @@ class AdminExcel(QWidget):
         autos_button.clicked.connect(self.autos_to_excel)
         med_button = QPushButton('Собрать информацию о прохождении мед. осмотра')
         med_button.clicked.connect(self.medicine_to_excel)
-        service_button = QPushButton('Собрать информацию о прохождении тех. обслуживания') # 1 лист - по датам, 2 лист - кол-ву разных типов
-        service_button.clicked.connect(self.service_to_excel)
 
         buttons_layout = QVBoxLayout()
         buttons_layout.addWidget(drivers_button)
         buttons_layout.addWidget(autos_button)
         buttons_layout.addWidget(med_button)
-        buttons_layout.addWidget(service_button)
 
         layout.addWidget(self.label_info)
         layout.addLayout(buttons_layout)
@@ -284,12 +290,39 @@ class AdminExcel(QWidget):
         close_button = QPushButton('Закрыть окно')
         close_button.clicked.connect(self.close)
         layout.addWidget(close_button)
+        self.center()
+
+    def center(self):
+        screen_geometry = QApplication.primaryScreen().geometry()
+        window_geometry = self.frameGeometry()
+        window_geometry.moveCenter(screen_geometry.center())
+        self.move(window_geometry.topLeft())
 
     def drivers_to_excel(self):
         def export():
-            # self.cursor.execute('describe routs')
-            # columns = [column[0] for column in self.cursor.fetchall()]
-            pass
+            workbook = openpyxl.Workbook()
+            worksheet = workbook.active
+
+            for col_idx, header in enumerate(["rout_id", "auto_id", "routs.driver_id", "departure_date", "arrival_date", "distance", "destination"], start=1):
+                column_letter = get_column_letter(col_idx)
+                cell = f"{column_letter}1"
+                worksheet[cell] = header
+                worksheet[cell].alignment = Alignment(horizontal='center')
+
+            selected_table = drivers_cb.currentText()
+            self.cursor.execute(
+                f'select rout_id, auto_id, routs.driver_id, departure_date, arrival_date, distance, destination from routs '
+                f'inner join driver on driver.driver_id = routs.driver_id '
+                f'where driver.driver_id = {selected_table.split()[0]}')
+
+            for row_idx, row_data in enumerate([list(item) for item in self.cursor.fetchall()], start=2):
+                for col_idx, value in enumerate(row_data, start=1):
+                    column_letter = get_column_letter(col_idx)
+                    cell = f"{column_letter}{row_idx}"
+                    worksheet[cell] = value
+
+            dialog.close()
+            workbook.save(f'driver_{selected_table.split()[2]}.xlsx')
 
         dialog = QDialog(self)
         dialog.setWindowTitle('Маршруты')
@@ -300,24 +333,89 @@ class AdminExcel(QWidget):
         for i in [f'{str(item[0])} - {item[2]} {item[1]}' for item in data]:
             drivers_cb.addItem(i)
 
-        routs_table = QTableWidget()
         show_table = QPushButton('Вывести в excel')
+        drivers_label = QLabel('Выберите водителя:')
+        dr_layout = QHBoxLayout()
+        dr_layout.addWidget(drivers_label)
+        dr_layout.addWidget(drivers_cb)
         show_table.clicked.connect(export)
         layout = QVBoxLayout()
-        layout.addWidget(drivers_cb)
-        layout.addWidget(routs_table)
+        layout.addLayout(dr_layout)
         layout.addWidget(show_table)
         dialog.setLayout(layout)
-
         result = dialog.exec()
 
-
-
     def autos_to_excel(self):
-        pass
+        def export():
+            workbook = openpyxl.Workbook()
+            worksheet = workbook.active
+
+            for col_idx, header in enumerate(
+                    ["rout_id", "auto_id", "routs.driver_id", "departure_date", "arrival_date", "distance",
+                     "destination"], start=1):
+                column_letter = get_column_letter(col_idx)
+                cell = f"{column_letter}1"
+                worksheet[cell] = header
+                worksheet[cell].alignment = Alignment(horizontal='center')
+
+            selected_table = auto_cb.currentText()
+            self.cursor.execute(
+                f'select rout_id, routs.auto_id, driver_id, departure_date, arrival_date, distance, destination from routs '
+                f'inner join auto on auto.auto_id = routs.auto_id '
+                f'where auto.auto_id = {selected_table.split()[0]}')
+
+            for row_idx, row_data in enumerate([list(item) for item in self.cursor.fetchall()], start=2):
+                for col_idx, value in enumerate(row_data, start=1):
+                    column_letter = get_column_letter(col_idx)
+                    cell = f"{column_letter}{row_idx}"
+                    worksheet[cell] = value
+
+            dialog.close()
+            workbook.save(f'auto_{selected_table.split()[0]}.xlsx')
+
+        dialog = QDialog(self)
+        dialog.setWindowTitle('Маршруты')
+
+        auto_cb = QComboBox()
+        self.cursor.execute('select auto_id, mark, model from auto')
+        data = [list(sub_list) for sub_list in self.cursor.fetchall()]
+        for i in [f'{str(item[0])} - {item[1]} {item[2]}' for item in data]:
+            auto_cb.addItem(i)
+
+        show_table = QPushButton('Вывести в excel')
+        autos_label = QLabel('Выберите автомобиль:')
+        auto_layout = QHBoxLayout()
+        auto_layout.addWidget(autos_label)
+        auto_layout.addWidget(auto_cb)
+        show_table.clicked.connect(export)
+        layout = QVBoxLayout()
+        layout.addLayout(auto_layout)
+        layout.addWidget(show_table)
+        dialog.setLayout(layout)
+        result = dialog.exec()
 
     def medicine_to_excel(self):
-        pass
+        workbook = openpyxl.Workbook()
+        worksheet = workbook.active
 
-    def service_to_excel(self):
-        pass
+        for col_idx, header in enumerate(
+                ["driver_id", "name", "female", "drivers_license_number", "last_med_exam_date", "next_med_exam_date", "completed_status"], start=1):
+            column_letter = get_column_letter(col_idx)
+            cell = f"{column_letter}1"
+            worksheet[cell] = header
+            worksheet[cell].alignment = Alignment(horizontal='center')
+
+        self.cursor.execute(
+            f'select driver_id, name, female, drivers_license_number, last_med_exam_date, '
+            f'date_add(last_med_exam_date , INTERVAL 90 DAY) as next_med_exam_date, '
+            f'if(datediff(now(), date_add(last_med_exam_date , INTERVAL 90 DAY)) > 0, "true", "false") as completed_status '
+            f'from driver '
+                            )
+
+        for row_idx, row_data in enumerate([list(item) for item in self.cursor.fetchall()], start=2):
+            for col_idx, value in enumerate(row_data, start=1):
+                column_letter = get_column_letter(col_idx)
+                cell = f"{column_letter}{row_idx}"
+                worksheet[cell] = value
+
+        workbook.save(f'med_exams.xlsx')
