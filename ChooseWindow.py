@@ -1,5 +1,4 @@
 from PyQt6.QtWidgets import *
-# import mysql.connector
 
 
 class AdminChooseWindow(QWidget):
@@ -8,7 +7,7 @@ class AdminChooseWindow(QWidget):
         self.currentUser = None
 
         self.setWindowTitle("Выбор")
-        self.setGeometry(400, 400, 200, 300)
+        self.setGeometry(0, 0, 200, 300)
 
         self.init_ui()
 
@@ -26,6 +25,13 @@ class AdminChooseWindow(QWidget):
         layout.addWidget(self.main_button)
         layout.addWidget(self.back_button)
         self.setLayout(layout)
+        self.center()
+
+    def center(self):
+        screen_geometry = QApplication.primaryScreen().geometry()
+        window_geometry = self.frameGeometry()
+        window_geometry.moveCenter(screen_geometry.center())
+        self.move(window_geometry.topLeft())
 
     def to_main(self):
         from admin_main import AdminDatabase
