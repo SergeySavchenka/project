@@ -34,17 +34,24 @@ class AdminChooseWindow(QWidget):
         self.move(window_geometry.topLeft())
 
     def to_main(self):
-        from admin_main import AdminDatabase
-        if self.currentUser:
-            self.currentUser.close()
-        self.currentUser = AdminDatabase()
-        self.currentUser.show()
+        try:
+            from admin_main import AdminDatabase
+            if self.currentUser:
+                self.currentUser.close()
+            self.currentUser = AdminDatabase()
+            self.currentUser.show()
+        except:
+            self.error_message('Ошибка подключения к бд')
 
     def to_excel(self):
-        from admin_main import AdminExcel
-        if self.currentUser:
-            self.currentUser.close()
-        self.currentUser = AdminExcel()
-        self.currentUser.show()
+        try:
+            from admin_main import AdminExcel
+            if self.currentUser:
+                self.currentUser.close()
+            self.currentUser = AdminExcel()
+            self.currentUser.show()
+        except:
+            self.error_message('Ошибка')
 
-
+    def error_message(self, text):
+        QMessageBox.information(self, "Ошибка", text)
