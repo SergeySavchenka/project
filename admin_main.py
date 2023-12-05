@@ -11,7 +11,7 @@ class AdminDatabase(QWidget):
         self.connection = mysql.connector.connect(
             host="localhost",
             user="root",
-            password="",
+            password="root",
             database="inform_sys"
         )
 
@@ -138,22 +138,25 @@ class AdminDatabase(QWidget):
 
         # Обработчик нажатия кнопки "Добавить"
         def add_data():
-            # Получение значений из полей ввода
-            values = [field.text() for field in input_fields]
+            try:
+                # Получение значений из полей ввода
+                values = [field.text() for field in input_fields]
 
-            # Убедитесь, что количество введенных значений соответствует количеству столбцов
-            if len(values) == len(columns):
-                # Формирование SQL-запроса для добавления данных
-                query = f"INSERT INTO {selected_table} ({', '.join(columns)}) VALUES ({', '.join(['%s'] * len(columns))})"
-                self.cursor.execute(query, values)
-                self.connection.commit()
+                # Убедитесь, что количество введенных значений соответствует количеству столбцов
+                if len(values) == len(columns):
+                    # Формирование SQL-запроса для добавления данных
+                    query = f"INSERT INTO {selected_table} ({', '.join(columns)}) VALUES ({', '.join(['%s'] * len(columns))})"
+                    self.cursor.execute(query, values)
+                    self.connection.commit()
 
-                print("Данные добавлены успешно")
-                self.show_data()  # Обновление отображения данных
-                dialog.accept()  # Закрытие диалогового окна после успешного добавления данных
+                    QMessageBox.information(self, "Успешно!", 'Данные успешно добавлены')
+                    self.show_data()  # Обновление отображения данных
+                    dialog.accept()  # Закрытие диалогового окна после успешного добавления данных
 
-            else:
-                print("Ошибка: Количество введенных значений не совпадает с количеством столбцов")
+                else:
+                    print("Ошибка: Количество введенных значений не совпадает с количеством столбцов")
+            except:
+                self.error_message('Проверьте входные данные')
 
         add_button = QPushButton('Добавить')
         form_layout.addRow(add_button)
@@ -190,7 +193,7 @@ class AdminDatabase(QWidget):
             self.cursor.execute(query)
             self.connection.commit()
 
-            print("Данные удалены успешно")
+            QMessageBox.information(self,"Успешно!", 'Данные успешно удалены')
             self.show_data()  # Обновление отображения данных
             dialog.accept()  # Закрытие диалогового окна после успешного удаления данных
 
@@ -198,6 +201,9 @@ class AdminDatabase(QWidget):
 
         # Отображение диалогового окна
         result = dialog.exec()
+
+    def error_message(self, text):
+        QMessageBox.information(self,"Ошибка", text)
 
     # def show_edit_data_dialog(self):
     #     selected_data = self.get_selected_data()
@@ -252,7 +258,7 @@ class AdminExcel(QWidget):
         self.connection = mysql.connector.connect(
             host="localhost",
             user="root",
-            password="",
+            password="root",
             database="inform_sys"
         )
 
