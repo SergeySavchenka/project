@@ -54,8 +54,7 @@ class AppWindow(QWidget):
             print('Введены некорректные значения')
 
     def error_message(self, text):
-        QMessageBox.information(
-            self, "Ошибка", text)
+        QMessageBox.information(self, "Ошибка", text)
 
     def to_database_window(self):
         if self.currentUser:
