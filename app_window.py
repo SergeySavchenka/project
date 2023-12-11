@@ -9,15 +9,15 @@ class AppWindow(QWidget):
         self.initUI()
 
     def initUI(self):
-        self.setWindowTitle("Authorization")
+        self.setWindowTitle("Авторизация")
         self.setGeometry(0, 0, 400, 200)
 
-        self.username_label = QLabel("login:")
+        self.username_label = QLabel("Логин:")
         self.username_input = QLineEdit()
-        self.password_label = QLabel("password:")
+        self.password_label = QLabel("Пароль:")
         self.password_input = QLineEdit()
         self.password_input.setEchoMode(QLineEdit.EchoMode.Password)
-        self.login_button = QPushButton("sign_in")
+        self.login_button = QPushButton("Войти")
         self.login_button.clicked.connect(self.login)
 
         layout = QVBoxLayout()
@@ -46,15 +46,15 @@ class AppWindow(QWidget):
         try:
             if username == 'admin' and password == 'admin':
                 self.to_database_window()
-            elif username.split()[0] == 'driver' and username.split()[1].isdigit() and username == password:
+            elif username.startswith('driver') and username.split()[1].isdigit() and username == password:
                 self.to_driver_window()
             else:
                 self.error_message('Не существующий логин или пароль')
         except:
-            print('Введены некорректные значения')
+            self.error_message('Введены некорректные значения')
 
     def error_message(self, text):
-        QMessageBox.information(self, "Ошибка", text)
+        QMessageBox.warning(self, "Ошибка", text)
 
     def to_database_window(self):
         if self.currentUser:
