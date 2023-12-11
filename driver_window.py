@@ -1,5 +1,7 @@
 from PyQt6.QtWidgets import *
 import mysql.connector
+from datetime import date
+from openpyxl.styles import NamedStyle
 
 
 class DriverWindow(QWidget):
@@ -27,14 +29,13 @@ class DriverWindow(QWidget):
 
         self.cursor.execute(f"SELECT * FROM driver where driver_id = {self.driver_id}")
         data = [element for sub_list in self.cursor.fetchall() for element in sub_list]
-        print(data)
 
         self.cursor.execute(
             f'select ((YEAR(now()) - YEAR(birth_date)) - ((DATE_FORMAT(now(), "00-%m-%d") < DATE_FORMAT(birth_date, "00-%m-%d")))) as age from driver where driver_id = {self.driver_id}')
-        age = self.cursor.fetchall()[0][0]
+        age = str(self.cursor.fetchall()[0][0])
 
         intro_layout = QHBoxLayout()
-        fio_and_age = QLabel(f'{data[2]} {data[1]}, {age} years')
+        fio_and_age = QLabel(f'{data[2]} {data[1]}, {age} {"год" if age[-1] == "1" else "года" if age[-1] in "234" else "лет"}')
         intro_layout.addWidget(fio_and_age)
 
         form_layout = QFormLayout()
@@ -132,7 +133,10 @@ class DriverWindow(QWidget):
             f'inner join driver on driver.driver_id = routs.driver_id '
             f'where driver.driver_id = {self.driver_id}')
 
-        for row_idx, row_data in enumerate([list(item) for item in self.cursor.fetchall()], start=2):
+        data = self.cursor.fetchall()
+        print(data)
+
+        for row_idx, row_data in enumerate([list(item) for item in data], start=2):
             for col_idx, value in enumerate(row_data, start=1):
                 column_letter = get_column_letter(col_idx)
                 cell = f"{column_letter}{row_idx}"
