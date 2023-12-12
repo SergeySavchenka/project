@@ -154,9 +154,9 @@ class AdminDatabase(QWidget):
                     dialog.accept()  # Закрытие диалогового окна после успешного добавления данных
 
                 else:
-                    self.error_message("Ошибка: Количество введенных значений не совпадает с количеством столбцов")
+                    QMessageBox.warning(self, 'Предупреждение об ошибке', 'Количество введенных значений не совпадает с количеством столбцов')
             except:
-                self.error_message("Ошибка!")
+                QMessageBox.warning(self, 'Предупреждение об ошибке', 'Ошибка!')
 
         add_button = QPushButton('Добавить')
         form_layout.addRow(add_button)
@@ -231,10 +231,7 @@ class AdminDatabase(QWidget):
             result = edit_dialog.exec()
 
         else:
-            self.error_message("Выберите запись для редактирования.")
-
-    def error_message(self, text):
-        QMessageBox.warning(self, "Ошибка", text)
+            QMessageBox.warning(self, 'Предупреждение об ошибке', 'Выберите запись для редактирования')
 
     def get_selected_data(self):
         selected_items = self.data_table.selectedItems()
@@ -267,7 +264,7 @@ class AdminDatabase(QWidget):
             print("Данные успешно отредактированы")
             self.show_data()  # Обновление отображения данных
         except:
-            self.error_message("Ошибка при редактировании данных.")
+            QMessageBox.warning(self, 'Предупреждение об ошибке', 'Ошибка при редактировании данных')
 
 
 class AdminExcel(QWidget):
