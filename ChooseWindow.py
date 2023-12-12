@@ -39,16 +39,13 @@ class AdminChooseWindow(QWidget):
         try:
             if self.currentUser:
                 self.currentUser.close()
-            self.currentUser = window_class()
+            self.currentUser = window_class
             self.currentUser.show()
         except Exception as e:
-            self.error_message(f'Ошибка: {str(e)}')
+            QMessageBox.warning(self, "Предупреждение об ошибке", f'Ошибка: {str(e)}')
 
     def to_main(self):
-        self.open_window(AdminDatabase)
+        self.open_window(AdminDatabase())
 
     def to_excel(self):
-        self.open_window(AdminExcel)
-
-    def error_message(self, text):
-        QMessageBox.warning(self, "Ошибка", text)
+        self.open_window(AdminExcel())
