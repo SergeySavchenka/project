@@ -2,7 +2,7 @@ from PyQt6.QtWidgets import *
 import sys
 
 
-class AppWindow(QWidget):
+class AuthorizationWindow(QWidget):
     def __init__(self):
         super().__init__()
         self.currentUser = None
@@ -45,27 +45,24 @@ class AppWindow(QWidget):
         password = self.password_input.text().strip()
         try:
             if username == 'admin' and password == 'admin':
-                self.to_database_window()
+                self.to_admin_window()
             elif username.startswith('driver') and username.split()[1].isdigit() and username == password:
                 self.to_driver_window()
             else:
-                self.error_message('Не существующий логин или пароль')
+                QMessageBox.warning(self, 'Предупреждение об ошибке', 'Не существующий логин или пароль')
         except:
-            self.error_message('Введены некорректные значения')
+            QMessageBox.warning(self, 'Предупреждение об ошибке', 'Введены некорректные значения')
 
-    def error_message(self, text):
-        QMessageBox.warning(self, "Ошибка", text)
-
-    def to_database_window(self):
-        if self.currentUser:
-            self.currentUser.close()
-        self.currentUser = AdminChooseWindow()
-        self.currentUser.show()
+    def to_admin_window(self):
+        self.to_new_window(AdminChooseWindow())
 
     def to_driver_window(self):
+        self.to_new_window(DriverWindow(self.username_input.text().split()[1]))
+
+    def to_new_window(self, user):
         if self.currentUser:
             self.currentUser.close()
-        self.currentUser = DriverWindow(self.username_input.text().split()[1])
+        self.currentUser = user
         self.currentUser.show()
 
 
@@ -74,7 +71,7 @@ if __name__ == "__main__":
     from driver_window import DriverWindow
     app = QApplication(sys.argv)
 
-    app_window = AppWindow()
+    app_window = AuthorizationWindow()
     app_window.show()
 
     sys.exit(app.exec())
