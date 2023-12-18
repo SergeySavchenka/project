@@ -11,7 +11,7 @@ class AdminDatabase(QWidget):
         self.connection = mysql.connector.connect(
             host="localhost",
             user="root",
-            password="",
+            password="root",
             database="inform_sys"
         )
 
@@ -243,7 +243,7 @@ class AdminExcel(QWidget):
         self.connection = mysql.connector.connect(
             host="localhost",
             user="root",
-            password="",
+            password="root",
             database="inform_sys"
         )
 
