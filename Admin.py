@@ -75,54 +75,40 @@ class AdminDatabase(QWidget):
         self.move(window_geometry.topLeft())
 
     def show_data(self):
-        # Очистка таблицы перед отображением новых данных
         self.data_table.clear()
         self.data_table.setRowCount(0)
 
-        # Выбор таблицы из выпадающего списка
         selected_table = self.table_selector.currentText()
 
         self.cursor.execute(f"SELECT * FROM {selected_table}")
         data = self.cursor.fetchall()
 
-        # Если есть данные
         if data:
-            # Определение числа столбцов и строк
             num_rows = len(data)
             num_cols = len(data[0])
 
-            # Установка размера таблицы
             self.data_table.setRowCount(num_rows)
             self.data_table.setColumnCount(num_cols)
 
-            # Установка заголовков столбцов
             column_headers = [description[0] for description in self.cursor.description]
             self.data_table.setHorizontalHeaderLabels(column_headers)
 
-            # Заполнение ячеек таблицы данными
             for row in range(num_rows):
                 for col in range(num_cols):
                     item = QTableWidgetItem(str(data[row][col]))
                     self.data_table.setItem(row, col, item)
 
     def populate_table_combo(self):
-        # Получение списка таблиц из базы данных
         self.cursor.execute("SHOW TABLES")
         tables = self.cursor.fetchall()
 
-        # Заполнение выпадающего списка
         for table in tables:
             self.table_selector.addItem(table[0])
 
     def show_add_data_dialog(self):
-        # Определение выбранной таблицы
         selected_table = self.table_selector.currentText()
-
-        # Получение названий столбцов для выбранной таблицы
         self.cursor.execute(f"DESCRIBE {selected_table}")
         columns = [column[0] for column in self.cursor.fetchall()]
-
-        # Создание диалогового окна с полями ввода для каждого столбца и кнопкой "Добавить"
         form_layout = QFormLayout()
         input_fields = []
 
@@ -136,40 +122,31 @@ class AdminDatabase(QWidget):
         dialog.setWindowTitle('Ввод данных')
         dialog.setLayout(form_layout)
 
-        # Обработчик нажатия кнопки "Добавить"
         def add_data():
             try:
-                # Получение значений из полей ввода
                 values = [field.text() for field in input_fields]
-
-                # Убедитесь, что количество введенных значений соответствует количеству столбцов
                 if len(values) == len(columns):
-                    # Формирование SQL-запроса для добавления данных
                     query = f"INSERT INTO {selected_table} ({', '.join(columns)}) VALUES ({', '.join(['%s'] * len(columns))})"
                     self.cursor.execute(query, values)
                     self.connection.commit()
 
                     QMessageBox.information(self, "Успешно", "Данные добавлены успешно!")
-                    self.show_data()  # Обновление отображения данных
-                    dialog.accept()  # Закрытие диалогового окна после успешного добавления данных
-
+                    self.show_data()
+                    dialog.accept()
                 else:
-                    QMessageBox.warning(self, 'Предупреждение об ошибке', 'Количество введенных значений не совпадает с количеством столбцов')
+                    QMessageBox.warning(self, 'Предупреждение об ошибке',
+                                        'Количество введенных значений не совпадает с количеством столбцов')
             except:
                 QMessageBox.warning(self, 'Предупреждение об ошибке', 'Ошибка!')
 
         add_button = QPushButton('Добавить')
         form_layout.addRow(add_button)
         add_button.clicked.connect(add_data)
-
-        # Отображение диалогового окна
         result = dialog.exec()
 
     def show_delete_data_dialog(self):
-        # Определение выбранной таблицы
         selected_table = self.table_selector.currentText()
 
-        # Создание диалогового окна с полем ввода для значения id и кнопкой "Удалить"
         form_layout = QFormLayout()
         id_input = QLineEdit()
         delete_button = QPushButton('Удалить')
@@ -180,26 +157,24 @@ class AdminDatabase(QWidget):
         dialog.setWindowTitle('Удаление данных')
         dialog.setLayout(form_layout)
 
-        # Обработчик нажатия кнопки "Удалить"
         def delete_data():
             self.cursor.execute(f"DESCRIBE {selected_table}")
             id_column = [column[0] for column in self.cursor.fetchall()][0]
 
-            # Получение значения из поля ввода
             id_value = id_input.text()
+            try:
+                query = f"DELETE FROM {selected_table} WHERE {id_column} = {id_value}"
+                self.cursor.execute(query)
+                self.connection.commit()
 
-            # Формирование SQL-запроса для удаления данных
-            query = f"DELETE FROM {selected_table} WHERE {id_column} = {id_value}"
-            self.cursor.execute(query)
-            self.connection.commit()
-
-            QMessageBox.information(self, "Успешно", "Данные удалены успешно!")
-            self.show_data()  # Обновление отображения данных
-            dialog.accept()  # Закрытие диалогового окна после успешного удаления данных
+                QMessageBox.information(self, "Успешно", "Данные удалены успешно!")
+            except:
+                QMessageBox.warning(self, 'Сообщение об ошибке!', 'Проверьте введенное значение поля id')
+            self.show_data()
+            dialog.accept()
 
         delete_button.clicked.connect(delete_data)
 
-        # Отображение диалогового окна
         result = dialog.exec()
 
     def show_edit_data_dialog(self):
@@ -208,10 +183,8 @@ class AdminDatabase(QWidget):
         if selected_data:
             edit_dialog = QDialog(self)
             edit_dialog.setWindowTitle('Редактировать запись')
-
             layout = QFormLayout()
 
-            # Примеры полей редактирования (замените их на необходимые поля)
             input_fields = []
             for key, value in selected_data.items():
                 label = QLabel(key.capitalize())
@@ -223,13 +196,12 @@ class AdminDatabase(QWidget):
                 input_fields.append(edit_line)
 
             save_button = QPushButton('Сохранить')
-            save_button.clicked.connect(lambda: self.save_edited_data(selected_data, input_fields))
+            save_button.clicked.connect(lambda: self.save_edited_data(selected_data, input_fields, edit_dialog))
             layout.addRow(save_button)
 
             edit_dialog.setLayout(layout)
 
             result = edit_dialog.exec()
-
         else:
             QMessageBox.warning(self, 'Предупреждение об ошибке', 'Выберите запись для редактирования')
 
@@ -243,26 +215,25 @@ class AdminDatabase(QWidget):
                 item = self.data_table.item(selected_row, col)
                 selected_data[header] = item.text()
             return selected_data
-        return None
 
-    def save_edited_data(self, selected_data, input_fields):
-        # Реализуйте сохранение отредактированных данных в базе данных
+    def save_edited_data(self, selected_data, input_fields, dialog):
         try:
-            selected_id = selected_data.get(
-                "id")  # Предположим, что у вас есть столбец с уникальными идентификаторами "id"
+            selected_id = list(selected_data.values())[0]
+            field_id = list(selected_data.keys())[0]
             if not selected_id:
                 raise ValueError("Отсутствует уникальный идентификатор для редактирования.")
 
             update_values = {key: field.text() for key, field in zip(selected_data.keys(), input_fields)}
 
             set_clause = ", ".join([f"{key} = %s" for key in update_values.keys()])
-            query = f"UPDATE {self.table_selector.currentText()} SET {set_clause} WHERE id = {selected_id}"
+            query = f"UPDATE {self.table_selector.currentText()} SET {set_clause} WHERE {field_id} = {selected_id}"
 
             self.cursor.execute(query, tuple(update_values.values()))
             self.connection.commit()
 
-            print("Данные успешно отредактированы")
-            self.show_data()  # Обновление отображения данных
+            QMessageBox.information(self, "Успешно!", "Данные успешно отредактированы")
+            self.show_data()
+            dialog.accept()
         except:
             QMessageBox.warning(self, 'Предупреждение об ошибке', 'Ошибка при редактировании данных')
 
@@ -322,24 +293,24 @@ class AdminExcel(QWidget):
         def export():
             selected_table = drivers_cb.currentText()
             self.cursor.execute(
-                f'select rout_id, concat(mark, " ", model), concat(female, " ", name), departure_date, arrival_date, distance, destination from routs '
+                f'select rout_id, concat(mark, " ", model), concat(female, " ", name), '
+                f'departure_date, arrival_date, distance, destination from routs '
                 f'inner join driver on driver.driver_id = routs.driver_id '
                 f'inner join auto on auto.auto_id = routs.auto_id '
                 f'where driver.driver_id = {selected_table.split()[0]}')
             data = self.cursor.fetchall()
-            headers = ["rout id", "auto", "driver", "departure_date", "arrival_date", "distance", "destination"]
-            file_name = f'driver_{selected_table.split()[2]}.xlsx'
+            headers = ["id рейса", "Авто", "Водитель", "Дата выезда", "Дата прибытия", "Расстояние",
+                       "Пункт назначенния"]
+            file_name = f'Маршруты {selected_table.split()[2]}.xlsx'
             self.export_to_excel(data, headers, file_name)
             dialog.close()
 
         dialog = QDialog(self)
         dialog.setWindowTitle('Маршруты')
-
         drivers_cb = QComboBox()
         self.cursor.execute('select driver_id, name, female from driver')
         driver_info = [list(sub_list) for sub_list in self.cursor.fetchall()]
         drivers_cb.addItems([f'{str(item[0])} - {item[2]} {item[1]}' for item in driver_info])
-
         show_table = QPushButton('Вывести в excel')
         drivers_label = QLabel('Выберите водителя:')
         dr_layout = QHBoxLayout()
@@ -356,13 +327,15 @@ class AdminExcel(QWidget):
         def export():
             selected_table = auto_cb.currentText()
             self.cursor.execute(
-                f'select rout_id, concat(mark, " ", model), concat(female, " ", name), departure_date, arrival_date, distance, destination from routs '
+                f'select rout_id, concat(mark, " ", model), concat(female, " ", name), '
+                f'departure_date, arrival_date, distance, destination from routs '
                 f'inner join auto on auto.auto_id = routs.auto_id '
                 f'inner join driver on driver.driver_id = routs.driver_id '
                 f'where auto.auto_id = {selected_table.split()[0]}')
             data = self.cursor.fetchall()
-            headers = ["rout id", "auto", "driver", "departure_date", "arrival_date", "distance", "destination"]
-            file_name = f'auto_{selected_table.split()[0]}.xlsx'
+            headers = ["id рейса", "Авто", "Водитель", "Дата выезда", "Дата прибытия", "Расстояние",
+                       "Пункт назначенния"]
+            file_name = f'Маршруты {selected_table.split()[2]} {selected_table.split()[3]}.xlsx'
             self.export_to_excel(data, headers, file_name)
             dialog.close()
 
@@ -390,43 +363,40 @@ class AdminExcel(QWidget):
         self.cursor.execute(
             f'select driver_id, name, female, drivers_license_number, last_med_exam_date, '
             f'date_add(last_med_exam_date , INTERVAL 90 DAY) as next_med_exam_date, '
-            f'if(datediff(now(), date_add(last_med_exam_date , INTERVAL 90 DAY)) > 0, "true", "false") as completed_status '
+            f'if(datediff(now(), date_add(last_med_exam_date , INTERVAL 90 DAY)) > 0, "Не пройдена", "Пройдена") as completed_status '
             f'from driver '
-                            )
+        )
+
         data = self.cursor.fetchall()
-        headers = ["driver_id", "name", "female", "drivers_license_number", "last_med_exam_date", "next_med_exam_date", "completed_status"]
-        file_name = 'med_exams.xlsx'
+        headers = ["id водителя", "Имя", "Фамилия", "Номер водительского удостоверения",
+                   "Дата последней мед.комиссии", "Дата следующей мед.комиссии", "Статус прохождения мед.комиссии"]
+
+        file_name = 'Медицинские комиссии.xlsx'
         self.export_to_excel(data, headers, file_name)
 
     def export_to_excel(self, data, headers, file_name):
         try:
             workbook = openpyxl.Workbook()
             worksheet = workbook.active
-
             for col_idx, header in enumerate(headers, start=1):
                 column_letter = get_column_letter(col_idx)
-                cell = f"{column_letter}1"
-                worksheet[cell] = header
-                worksheet[cell].alignment = Alignment(horizontal='center')
-
+                worksheet[f"{column_letter}1"] = header
+                worksheet[f"{column_letter}1"].alignment = Alignment(horizontal='center')
             for row_idx, row_data in enumerate(data, start=2):
                 for col_idx, value in enumerate(row_data, start=1):
                     column_letter = get_column_letter(col_idx)
                     cell = f"{column_letter}{row_idx}"
                     worksheet[cell] = value
-
             for column in worksheet.columns:
                 max_length = 0
                 column = [cell for cell in column]
                 for cell in column:
                     try:
-                        if len(str(cell.value)) > max_length:
-                            max_length = len(cell.value)
+                        if len(str(cell.value)) > max_length: max_length = len(cell.value)
                     except:
                         pass
                 adjusted_width = (max_length + 2)
                 worksheet.column_dimensions[column[0].column_letter].width = adjusted_width
-
             workbook.save(file_name)
             QMessageBox.information(self, 'Успешно', 'Отчёт создан!')
         except:
