@@ -19,6 +19,8 @@ class AuthorizationWindow(QWidget):
         self.password_input.setEchoMode(QLineEdit.EchoMode.Password)
         self.login_button = QPushButton("Войти")
         self.login_button.clicked.connect(self.login)
+        close_button = QPushButton('Завершить программу')
+        close_button.clicked.connect(sys.exit)
 
         layout = QVBoxLayout()
         layout.addWidget(self.username_label)
@@ -26,12 +28,8 @@ class AuthorizationWindow(QWidget):
         layout.addWidget(self.password_label)
         layout.addWidget(self.password_input)
         layout.addWidget(self.login_button)
-
-        close_button = QPushButton('Завершить программу')
         layout.addWidget(close_button)
-        close_button.clicked.connect(sys.exit)
         self.setLayout(layout)
-
         self.center()
 
     def center(self):
@@ -50,8 +48,20 @@ class AuthorizationWindow(QWidget):
                 self.to_driver_window()
             else:
                 QMessageBox.warning(self, 'Предупреждение об ошибке', 'Не существующий логин или пароль')
+                self.username_input.clear()
+                self.password_input.clear()
         except:
-            QMessageBox.warning(self, 'Предупреждение об ошибке', 'Введены некорректные значения')
+            QMessageBox.warning(self, 'Предупреждение об ошибке', 'Проверьте введенные значения')
+            self.username_input.clear()
+            self.password_input.clear()
+
+    def to_new_window(self, user):
+        if self.currentUser:
+            self.currentUser.close()
+        self.currentUser = user
+        self.currentUser.show()
+        self.username_input.clear()
+        self.password_input.clear()
 
     def to_admin_window(self):
         self.to_new_window(AdminChooseWindow())
@@ -59,19 +69,11 @@ class AuthorizationWindow(QWidget):
     def to_driver_window(self):
         self.to_new_window(DriverWindow(self.username_input.text().split()[1]))
 
-    def to_new_window(self, user):
-        if self.currentUser:
-            self.currentUser.close()
-        self.currentUser = user
-        self.currentUser.show()
-
 
 if __name__ == "__main__":
     from ChooseWindow import AdminChooseWindow
-    from driver_window import DriverWindow
+    from Driver import DriverWindow
     app = QApplication(sys.argv)
-
     app_window = AuthorizationWindow()
     app_window.show()
-
     sys.exit(app.exec())
