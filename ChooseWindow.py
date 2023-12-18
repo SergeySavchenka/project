@@ -1,6 +1,6 @@
 from PyQt6.QtWidgets import *
-from admin_main import AdminExcel
-from admin_main import AdminDatabase
+from Admin import AdminExcel
+from Admin import AdminDatabase
 
 
 class AdminChooseWindow(QWidget):
