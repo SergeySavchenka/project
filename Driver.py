@@ -119,9 +119,12 @@ class DriverWindow(QWidget):
             worksheet[cell].alignment = Alignment(horizontal='center')
 
         self.cursor.execute(
-            f'select rout_id, auto_id, routs.driver_id, departure_date, arrival_date, distance, destination from routs '
+            f'select rout_id, concat(mark, " ", model), concat(female, " ", name), '
+            f'departure_date, arrival_date, distance, destination from routs '
+            f'inner join auto on auto.auto_id = routs.auto_id '
             f'inner join driver on driver.driver_id = routs.driver_id '
             f'where driver.driver_id = {self.driver_id}')
+
         data = self.cursor.fetchall()
 
         for row_idx, row_data in enumerate([list(item) for item in data], start=2):
@@ -129,4 +132,14 @@ class DriverWindow(QWidget):
                 column_letter = get_column_letter(col_idx)
                 cell = f"{column_letter}{row_idx}"
                 worksheet[cell] = value
+        for column in worksheet.columns:
+            max_length = 0
+            column = [cell for cell in column]
+            for cell in column:
+                try:
+                    if len(str(cell.value)) > max_length: max_length = len(cell.value)
+                except:
+                    pass
+            adjusted_width = (max_length + 2)
+            worksheet.column_dimensions[column[0].column_letter].width = adjusted_width
         workbook.save(f'Мои маршруты.xlsx')
