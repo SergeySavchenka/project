@@ -24,55 +24,87 @@ class AdminDatabase(QWidget):
         self.init_ui()
 
     def init_ui(self):
-        layout = QVBoxLayout()
+        try:
+            layout = QVBoxLayout()
 
-        self.label_info = QLabel("Выберите таблицу для отображения данных:")
-        self.table_selector = QComboBox()
-        self.populate_table_combo()
+            self.label_info = QLabel("Выберите таблицу для отображения данных:")
+            self.table_selector = QComboBox()
+            self.table_selector.currentTextChanged.connect(self.change_table)
 
-        choice_layout = QHBoxLayout()
-        choice_layout.addWidget(self.label_info)
-        choice_layout.addWidget(self.table_selector)
-        layout.addLayout(choice_layout)
+            choice_layout = QHBoxLayout()
+            choice_layout.addWidget(self.label_info)
+            choice_layout.addWidget(self.table_selector)
+            layout.addLayout(choice_layout)
 
-        self.add_button = QPushButton("Добавить запись")
-        self.add_button.clicked.connect(self.show_add_data_dialog)
-        self.delete_button = QPushButton("Удалить запись")
-        self.delete_button.clicked.connect(self.show_delete_data_dialog)
-        self.edit_button = QPushButton('Редактировать запись')
-        self.edit_button.clicked.connect(self.show_edit_data_dialog)
+            self.add_button = QPushButton("Добавить запись")
+            self.add_button.clicked.connect(self.show_add_data_dialog)
+            self.delete_button = QPushButton("Удалить запись")
+            self.delete_button.clicked.connect(self.show_delete_data_dialog)
+            self.edit_button = QPushButton('Редактировать запись')
+            self.edit_button.clicked.connect(self.show_edit_data_dialog)
 
-        button_layout = QHBoxLayout()
-        button_layout.addWidget(self.add_button)
-        button_layout.addWidget(self.delete_button)
-        button_layout.addWidget(self.edit_button)
-        layout.addLayout(button_layout)
+            button_layout = QHBoxLayout()
+            button_layout.addWidget(self.add_button)
+            button_layout.addWidget(self.delete_button)
+            button_layout.addWidget(self.edit_button)
+            layout.addLayout(button_layout)
 
-        self.data_table = QTableWidget()
-        self.data_table.horizontalHeader().setSectionResizeMode(QHeaderView.ResizeMode.Stretch)
-        self.data_table.verticalHeader().setSectionResizeMode(QHeaderView.ResizeMode.Stretch)
-        self.data_table.verticalHeader().setVisible(False)
+            self.data_table = QTableWidget()
+            self.data_table.horizontalHeader().setSectionResizeMode(QHeaderView.ResizeMode.Stretch)
+            self.data_table.verticalHeader().setSectionResizeMode(QHeaderView.ResizeMode.Stretch)
+            self.data_table.verticalHeader().setVisible(False)
 
-        self.btn_show_data = QPushButton("Показать данные", self)
-        self.btn_show_data.clicked.connect(self.show_data)
+            self.btn_show_data = QPushButton("Показать данные", self)
+            self.btn_show_data.clicked.connect(self.show_data)
 
-        layout.addWidget(self.label_info)
-        layout.addWidget(self.table_selector)
-        layout.addWidget(self.data_table)
-        layout.addWidget(self.btn_show_data)
+            layout.addWidget(self.label_info)
+            layout.addWidget(self.table_selector)
+            layout.addWidget(self.data_table)
+            layout.addWidget(self.btn_show_data)
 
-        self.setLayout(layout)
+            self.setLayout(layout)
 
-        close_button = QPushButton('Закрыть окно')
-        close_button.clicked.connect(self.close)
-        layout.addWidget(close_button)
-        self.center()
+            close_button = QPushButton('Закрыть окно')
+            close_button.clicked.connect(self.close)
+            layout.addWidget(close_button)
+            self.center()
+            self.populate_table_combo()
+        except Exception as e:
+            print(e)
 
     def center(self):
         screen_geometry = QApplication.primaryScreen().geometry()
         window_geometry = self.frameGeometry()
         window_geometry.moveCenter(screen_geometry.center())
         self.move(window_geometry.topLeft())
+
+    def change_table(self):
+        try:
+            self.data_table.horizontalHeader().setVisible(True)
+            self.data_table.clear()
+            self.data_table.setRowCount(0)
+
+            selected_table = self.table_selector.currentText()
+
+            self.cursor.execute(f"SELECT * FROM {selected_table}")
+            data = self.cursor.fetchall()
+
+            if data:
+                num_rows = len(data)
+                num_cols = len(data[0])
+
+                self.data_table.setRowCount(num_rows)
+                self.data_table.setColumnCount(num_cols)
+
+                column_headers = [description[0] for description in self.cursor.description]
+                self.data_table.setHorizontalHeaderLabels(column_headers)
+
+                for row in range(num_rows):
+                    for col in range(num_cols):
+                        item = QTableWidgetItem(str(data[row][col]))
+                        self.data_table.setItem(row, col, item)
+        except:
+            self.data_table.horizontalHeader().setVisible(False)
 
     def show_data(self):
         self.data_table.clear()
@@ -99,11 +131,15 @@ class AdminDatabase(QWidget):
                     self.data_table.setItem(row, col, item)
 
     def populate_table_combo(self):
-        self.cursor.execute("SHOW TABLES")
-        tables = self.cursor.fetchall()
+        try:
+            self.cursor.execute("SHOW TABLES")
+            tables = self.cursor.fetchall()
 
-        for table in tables:
-            self.table_selector.addItem(table[0])
+            self.table_selector.addItem('...')
+            for table in tables:
+                self.table_selector.addItem(table[0])
+        except Exception as e:
+            print(e)
 
     def show_add_data_dialog(self):
         selected_table = self.table_selector.currentText()
