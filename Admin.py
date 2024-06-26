@@ -54,13 +54,9 @@ class AdminDatabase(QWidget):
             self.data_table.verticalHeader().setSectionResizeMode(QHeaderView.ResizeMode.Stretch)
             self.data_table.verticalHeader().setVisible(False)
 
-            self.btn_show_data = QPushButton("Показать данные", self)
-            self.btn_show_data.clicked.connect(self.show_data)
-
             layout.addWidget(self.label_info)
             layout.addWidget(self.table_selector)
             layout.addWidget(self.data_table)
-            layout.addWidget(self.btn_show_data)
 
             self.setLayout(layout)
 
